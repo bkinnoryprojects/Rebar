@@ -1,47 +1,40 @@
-using System;
-using MongoDB.Bson;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+
 using MongoDB.Driver;
+using Microsoft.Extensions.Options;
+using RebarApplication.Data;
+using RebarApplication.Models;
 
-class Program
+var builder = WebApplication.CreateBuilder(args);
+
+// Register services here
+builder.Services.Configure<MongoDBSettings>(builder.Configuration.GetSection(nameof(MongoDBSettings)));
+
+builder.Services.AddSingleton<MongoDBContext>(serviceProvider =>
 {
-    static async System.Threading.Tasks.Task Main(string[] args)
-    {
-        string connectionString = "mongodb://localhost:27017";
-        string databaseName = "Reabar";
-        string collectionName = "RebarMenue";
+    var settings = serviceProvider.GetRequiredService<IOptions<MongoDBSettings>>().Value;
+    return new MongoDBContext(settings.ConnectionString, settings.DatabaseName);
+});
 
-        MongoClient client = new MongoClient(connectionString);
-        IMongoDatabase database = client.GetDatabase(databaseName);
-        IMongoCollection<BsonDocument> collection = database.GetCollection<BsonDocument>(collectionName);
+// Add controllers
+builder.Services.AddControllers();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new() { Title = "RebarApplication", Version = "v1" });
+});
 
-        // Inserting data for income
-        BsonDocument incomeDocument = new BsonDocument
-        {
-            { "Type", "Income" },
-            { "Amount", 500 },
-            { "Date", DateTime.Now }
-        };
-        
-        await collection.InsertOneAsync(incomeDocument);
+var app = builder.Build();
 
-        // Inserting data for expenditure
-        BsonDocument expenditureDocument = new BsonDocument
-        {
-            { "Type", "Expenditure" },
-            { "Amount", 200 },
-            { "Date", DateTime.Now }
-        };
+// Configure the HTTP request pipeline.
+app.UseHttpsRedirection();
 
-        await collection.InsertOneAsync(expenditureDocument);
+app.UseRouting();
+app.UseSwagger();
+app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "RebarApplication v1"));
 
-        // Querying the collection for all transactions
-        FilterDefinition<BsonDocument> filter = new BsonDocument();
-        var transactions = await collection.Find(filter).ToListAsync();
+app.UseAuthorization();
 
-        // Displaying the transactions
-        foreach (var transaction in transactions)
-        {
-            Console.WriteLine(transaction.ToJson());
-        }
-    }
-}
+app.MapControllers();
+
+app.Run();
