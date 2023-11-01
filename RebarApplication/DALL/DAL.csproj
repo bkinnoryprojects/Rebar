@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="APICommunication.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="MongoDB.Driver" Version="2.22.0" />
     <PackageReference Include="Owin" Version="1.0.0" />
   </ItemGroup>
